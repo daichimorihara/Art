@@ -8,7 +8,13 @@
 import SwiftUI
 
 class EmojiArtDocument: ObservableObject {
-    @Published var emojiArt: EmojiArt
+    @Published var emojiArt: EmojiArt {
+        didSet {
+            if emojiArt.background != oldValue.background {
+                fetchBackgroundImageDataIfNecessary()
+            }
+        }
+    }
     
     init() {
         emojiArt = EmojiArt()
@@ -18,11 +24,47 @@ class EmojiArtDocument: ObservableObject {
     var emojis: [EmojiArt.Emoji] { emojiArt.emojis }
     var background: EmojiArt.Background { emojiArt.background }
     
+    @Published var backgroundImage: UIImage?
+    @Published var backgroundImageFetchStatus = BackgroundImageFetchStatus.idle
+     
+    enum BackgroundImageFetchStatus {
+        case idle
+        case fetching
+    }
+    
+    private func fetchBackgroundImageDataIfNecessary() {
+        backgroundImage = nil
+        switch emojiArt.background {
+        case .url(let url):
+            backgroundImageFetchStatus = .fetching
+            DispatchQueue.global(qos: .userInitiated).async {
+                let imageData = try? Data(contentsOf: url)
+                DispatchQueue.main.async { [weak self] in
+                    if self?.emojiArt.background == EmojiArt.Background.url(url) {
+                        self?.backgroundImageFetchStatus = .idle
+                        if imageData != nil {
+                            self?.backgroundImage = UIImage(data: imageData!)
+                        }
+                    }
+                }
+            }
+       
+            
+        case .imageData(let data):
+            backgroundImage = UIImage(data: data)
+        case .blank:
+            break
+        }
+    }
+    
+    
+    
     // Mark - Intent
     
     //add move pintch delete and now what
-    func setBackgorund(_ background: EmojiArt.Background) {
+    func setBackground(_ background: EmojiArt.Background) {
         emojiArt.background = background
+        print("background set to \(background)")
     }
     
     func addEmoji(text: String, at location: (x: Int, y: Int), size: CGFloat) {
