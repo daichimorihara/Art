@@ -27,6 +27,17 @@ struct EmojiArt: Codable {
         }
     }
     
+    init() {}
+    
+    init(json: Data) throws {
+        self = try JSONDecoder().decode(EmojiArt.self, from: json)
+    }
+    
+    init(url: URL) throws {
+        let data =  try Data(contentsOf: url)
+        self = try EmojiArt(json: data)
+    }
+    
     func json() throws -> Data {
         return try JSONEncoder().encode(self)
     }
